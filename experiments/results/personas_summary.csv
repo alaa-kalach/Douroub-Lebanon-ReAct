@@ -1,0 +1,7 @@
+suite,factor,arm,success,score,persona_match,persona_fidelity,helpfulness,grounding,model_calls,format_errors,format_slips,grounding_checks,invented_observations,length_cutoffs,answer_words,lexical_variety,repeated_trigrams,cost_usd,latency_s,runs
+personas,routing,Auto (4 personas),0.9,0.9762000000000001,1.0,4.8,4.75,4.75,2.4,1,4,10,0,0,74.5,0.8021499999999999,0.00595,0.0026268,5.5695,20
+personas,routing,Host only (1 persona),0.95,0.9833500000000001,0.55,5.0,4.95,5.0,2.45,0,5,13,0,0,67.4,0.8159000000000001,0.010100000000000001,0.00244485,4.1305,20
+personas,fidelity,Alaa (host),0.75,0.9285,0.25,5.0,5.0,5.0,2.75,0,1,2,0,0,76.0,0.7905,0.0,0.00328275,5.475,4
+personas,fidelity,Rami (planner),0.75,0.9285,0.25,4.25,5.0,5.0,2.25,0,2,1,0,0,91.0,0.77525,0.00175,0.00230625,3.3200000000000003,4
+personas,fidelity,Layla (storyteller),1.0,1.0,0.25,4.5,5.0,5.0,2.75,0,1,2,0,0,87.25,0.8472500000000001,0.0,0.002754,6.3325,4
+personas,fidelity,Nadia (guardian),0.75,0.96425,0.25,4.75,5.0,5.0,2.25,0,0,0,0,0,55.75,0.8285,0.0,0.00068325,3.5375,4

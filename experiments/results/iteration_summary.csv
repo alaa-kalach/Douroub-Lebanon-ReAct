@@ -1,0 +1,3 @@
+suite,factor,arm,success,score,persona_match,persona_fidelity,helpfulness,grounding,model_calls,format_errors,format_slips,grounding_checks,invented_observations,length_cutoffs,answer_words,lexical_variety,repeated_trigrams,cost_usd,latency_s,runs,answer diversity,same numbers every time
+iteration,rules version,instructions v1 (first version),0.5833333333333334,0.90875,1.0,4.75,4.5,4.666666666666667,1.9166666666666667,0,0,1,0,0,42.0,0.8835833333333333,0.0,0.0011883333333333333,4.644166666666666,12,0.5835,1.0
+iteration,rules version,instructions v2 (+2 rules),0.9166666666666666,0.9880833333333333,1.0,4.833333333333333,4.666666666666667,5.0,2.0833333333333335,0,0,1,0,0,42.75,0.8946666666666667,0.0,0.0013766666666666667,4.263333333333333,12,0.51225,1.0

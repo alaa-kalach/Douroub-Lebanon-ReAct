@@ -1,0 +1,128 @@
+{
+  "gpt-6-luna": {
+    "temperature=0.1 + effort=none": {
+      "ok": true,
+      "detail": "pong"
+    },
+    "temperature=1.1 + effort=none": {
+      "ok": true,
+      "detail": "pong"
+    },
+    "top_p=0.5 + effort=none": {
+      "ok": true,
+      "detail": "pong"
+    },
+    "presence_penalty=0.6 + effort=none": {
+      "ok": false,
+      "detail": "500 Error code: 500 - {'error': {'message': 'The server had an error while processing your request. Sorry about that!', 'type': 'server_erro"
+    },
+    "frequency_penalty=0.3 + effort=none": {
+      "ok": false,
+      "detail": "500 Error code: 500 - {'error': {'message': 'The server had an error while processing your request. Sorry about that!', 'type': 'server_erro"
+    },
+    "temperature=0.1 + effort=low": {
+      "ok": false,
+      "detail": "400 Error code: 400 - {'error': {'message': \"Unsupported value: 'temperature' does not support 0.1 with this model. Only the default (1) val"
+    },
+    "temperature=1.1 + effort=low": {
+      "ok": false,
+      "detail": "400 Error code: 400 - {'error': {'message': \"Unsupported value: 'temperature' does not support 1.1 with this model. Only the default (1) val"
+    },
+    "top_p=0.5 + effort=low": {
+      "ok": false,
+      "detail": "400 Error code: 400 - {'error': {'message': \"Unsupported parameter: 'top_p' is not supported with this model.\", 'type': 'invalid_request_err"
+    },
+    "presence_penalty=0.6 + effort=low": {
+      "ok": false,
+      "detail": "400 Error code: 400 - {'error': {'message': \"Unsupported parameter: 'presence_penalty' is not supported with this model.\", 'type': 'invalid_"
+    },
+    "frequency_penalty=0.3 + effort=low": {
+      "ok": false,
+      "detail": "400 Error code: 400 - {'error': {'message': \"Unsupported parameter: 'frequency_penalty' is not supported with this model.\", 'type': 'invalid"
+    }
+  },
+  "gpt-5.4-mini": {
+    "temperature=0.1 + effort=none": {
+      "ok": true,
+      "detail": "pong"
+    },
+    "temperature=1.1 + effort=none": {
+      "ok": true,
+      "detail": "pong"
+    },
+    "top_p=0.5 + effort=none": {
+      "ok": true,
+      "detail": "pong"
+    },
+    "presence_penalty=0.6 + effort=none": {
+      "ok": true,
+      "detail": "pong"
+    },
+    "frequency_penalty=0.3 + effort=none": {
+      "ok": true,
+      "detail": "pong"
+    },
+    "temperature=0.1 + effort=low": {
+      "ok": false,
+      "detail": "400 Error code: 400 - {'error': {'message': \"Unsupported value: 'temperature' does not support 0.1 with this model. Only the default (1) val"
+    },
+    "temperature=1.1 + effort=low": {
+      "ok": false,
+      "detail": "400 Error code: 400 - {'error': {'message': \"Unsupported value: 'temperature' does not support 1.1 with this model. Only the default (1) val"
+    },
+    "top_p=0.5 + effort=low": {
+      "ok": false,
+      "detail": "400 Error code: 400 - {'error': {'message': \"Unsupported parameter: 'top_p' is not supported with this model.\", 'type': 'invalid_request_err"
+    },
+    "presence_penalty=0.6 + effort=low": {
+      "ok": false,
+      "detail": "400 Error code: 400 - {'error': {'message': \"Unsupported parameter: 'presence_penalty' is not supported with this model.\", 'type': 'invalid_"
+    },
+    "frequency_penalty=0.3 + effort=low": {
+      "ok": false,
+      "detail": "400 Error code: 400 - {'error': {'message': \"Unsupported parameter: 'frequency_penalty' is not supported with this model.\", 'type': 'invalid"
+    }
+  },
+  "gpt-5.4-nano": {
+    "temperature=0.1 + effort=none": {
+      "ok": true,
+      "detail": "pong"
+    },
+    "temperature=1.1 + effort=none": {
+      "ok": true,
+      "detail": "pong"
+    },
+    "top_p=0.5 + effort=none": {
+      "ok": true,
+      "detail": "pong"
+    },
+    "presence_penalty=0.6 + effort=none": {
+      "ok": true,
+      "detail": "pong"
+    },
+    "frequency_penalty=0.3 + effort=none": {
+      "ok": true,
+      "detail": "pong"
+    },
+    "temperature=0.1 + effort=low": {
+      "ok": false,
+      "detail": "400 Error code: 400 - {'error': {'message': \"Unsupported value: 'temperature' does not support 0.1 with this model. Only the default (1) val"
+    },
+    "temperature=1.1 + effort=low": {
+      "ok": false,
+      "detail": "400 Error code: 400 - {'error': {'message': \"Unsupported value: 'temperature' does not support 1.1 with this model. Only the default (1) val"
+    },
+    "top_p=0.5 + effort=low": {
+      "ok": false,
+      "detail": "400 Error code: 400 - {'error': {'message': \"Unsupported parameter: 'top_p' is not supported with this model.\", 'type': 'invalid_request_err"
+    },
+    "presence_penalty=0.6 + effort=low": {
+      "ok": false,
+      "detail": "400 Error code: 400 - {'error': {'message': \"Unsupported parameter: 'presence_penalty' is not supported with this model.\", 'type': 'invalid_"
+    },
+    "frequency_penalty=0.3 + effort=low": {
+      "ok": false,
+      "detail": "400 Error code: 400 - {'error': {'message': \"Unsupported parameter: 'frequency_penalty' is not supported with this model.\", 'type': 'invalid"
+    }
+  }
+}
