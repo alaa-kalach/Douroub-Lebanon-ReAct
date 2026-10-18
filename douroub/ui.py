@@ -3,7 +3,7 @@ Observation as it happens, compare the four personas on one question, meet the p
 Experiment results are not shown in the app: they are in the PDF report (docs/experiment_report.pdf), which the
 "How it works" page offers as a download.
 
-Run it with `python react_app.py` (or `python -m douroub.ui`).
+Run it with `python app.py` (or `python -m douroub.ui`).
 """
 from __future__ import annotations
 

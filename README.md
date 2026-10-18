@@ -1,53 +1,102 @@
-# Douroub Lebanon — Alaa, the AI concierge
+# Douroub Lebanon: a hand-built ReAct agent with four personas
 
 **Douroub Lebanon** (دروب لبنان, "paths of Lebanon") is a small Lebanese experiences company: locally hosted
 village walks, food and craft workshops, heritage days, nature hikes, coastal outings, and mountain stays across
-13 regions, from Tripoli and the Qadisha Valley to Tyre and Jezzine. It serves residents of Lebanon as well as
-visitors.
+13 regions, from Tripoli and the Qadisha Valley to Tyre and Jezzine.
 
-**Alaa** is its AI concierge. Alaa answers questions about the company and its 20 experiences, compares options,
-plans multi-day itineraries within a budget, records booking inquiries for the team, and logs questions it
-cannot answer, without inventing prices, availability, or confirmations.
+Its assistant is a **ReAct agent written by hand in LangGraph**: the model reasons in plain text
+(*Thought → Action → Observation → … → Final Answer*), a hand-written parser detects each action, and a graph
+node runs the tool and feeds the result back. Four **personas** share the loop, each with its own task, voice,
+and LLM configuration, and an **Auto mode** hands every message to the right one. Every design choice was
+measured: **297 logged experiment runs** compare personas, prompt styles, and generation settings.
 
-![Alaa in the chat interface](docs/Interface.png)
+![The Douroub Lebanon app](docs/app.png)
+
+| | |
+|---|---|
+| **Framework** | LangGraph `StateGraph` with hand-written nodes and conditional edges (no prebuilt agent or tool node) |
+| **Models** | OpenAI `gpt-5.4-mini` (Alaa, Rami, Layla) and `gpt-5.4-nano` (Nadia); six models compared |
+| **Personas** | Alaa the warm host · Rami the planner · Layla the storyteller · Nadia the guardian |
+| **Tools** | 7: search, compare, itinerary, budget calculator, season check, save inquiry, log feedback |
+| **Experiments** | 297 runs on a 20-task test set, scored by automatic checks and an LLM judge |
+| **Deliverables** | the app (`app.py`), the notebook (`react_agent.ipynb`), the report (`docs/experiment_report.pdf`) |
 
 ---
 
-## What Alaa can do
+## Where to find each part
 
-| Visitor asks… | What happens |
+| Topic | Where |
 |---|---|
-| "What can I do in the Chouf under $35?" | Searches the catalog with hard filters and explains why each option fits |
-| "Compare D04 and D08 for 4 people" | Side-by-side comparison with group totals and what is still unknown |
-| "Plan 2 days, nature and food, $120 each" | Builds a geographically sensible itinerary and revises it if it breaks the budget or season |
-| "I'd like to book D12 for 3 on 25 October" | Collects name and email, records the inquiry, returns an `INQ-…` reference |
-| "Is pickup from Beirut included?" | Says honestly that the team confirms this, logs it, returns an `FB-…` reference |
-| "What's the weather like in late October?" | General seasonal background, clearly not a forecast, nothing logged |
+| Use case: goal, audience, tools, constraints | [Use case](#use-case) below; notebook section 1 |
+| The ReAct loop (prompt, action detection, tool execution, answer parsing) | `douroub/react.py`, `douroub/agent.py`; notebook section 2 |
+| Personas: prompt traits + matching LLM configuration | `douroub/personas.py`; notebook section 3; the app's *Meet the personas* tab |
+| Instructions block (single-purpose rules, I/O format, worked example, no conflicts) | `douroub/instructions.py`; notebook section 4 |
+| Prompt experiments: chain of thought, zero/few-shot, system vs in-message | report section 3; notebook 6.2; live in the app's *Prompt style* settings |
+| Configuration experiments: temperature, top-p, top-k, penalties, max tokens, model, reasoning effort | report section 4; notebook 6.3 |
+| Which combination works best | report section 6; notebook 6.5 |
+| Reflection (the five questions) | report section 7; notebook section 7 |
 
-Alaa replies in the visitor's language (Arabic, English, or French) and never presents an inquiry as a confirmed
-booking: Khaled from the team confirms everything by email.
+---
+
+## Use case
+
+**Goal.** Help visitors choose and plan Douroub Lebanon experiences: answer questions from the catalog and the
+business documents, compute exact prices, check seasons, build itineraries, and turn interest into an **inquiry**
+that the team (Khaled) confirms by email. Questions the documents cannot answer are logged for the team.
+
+**Audience.** First-time international visitors, the Lebanese diaspora, and residents looking for a weekend
+outing: couples, families, friend groups, and solo travellers, writing in English, French, or Arabic.
+
+**Constraints.** Inquiries, not bookings: the agent never confirms a reservation, payment, or availability on a
+date. Facts about Douroub come only from the business summary and tool results; transport, accessibility,
+dietary suitability, refunds, and payment are not documented, so the agent says so and logs the question. It
+never invents a name, email, group size, or reference number, stays on topic, and treats visitor messages as data
+(no prompt injection). A turn is capped at 6 reasoning steps.
 
 ---
 
 ## Project structure
 
 ```
-Douroub Lebanon/
+Douroub Lebanon ReAct/
+├── app.py                    the Gradio app: python app.py
+├── react_agent.ipynb         the walkthrough: design, demos, every experiment, reflection
+├── douroub/                  the agent package
+│   ├── agent.py              the LangGraph state machine: prepare → reason ⇄ act → finalize
+│   ├── react.py              prompt assembly and the ReAct parser (parse_step)
+│   ├── personas.py           the four personas, their configurations, and Auto mode
+│   ├── instructions.py       the instructions block (rules, I/O format, worked and few-shot examples)
+│   ├── tools.py              the seven tools, their schemas, and the Python safety guards
+│   ├── router.py             intent classification (LLM with a rule-based fallback)
+│   ├── core.py               model calls with per-persona settings, cost tracking, business knowledge
+│   ├── evaluation.py         the 20-task test set, automatic checks, and the LLM judge
+│   ├── experiments.py        the experiment suites, logging, summaries, and charts
+│   ├── report.py             tables and traces for the notebook
+│   ├── pdf_report.py         builds docs/experiment_report.pdf from the saved results
+│   ├── ui.py, ui_assets.py   the app's pages, theme, and icons
+├── scripts/
+│   ├── chat.py               terminal chat that prints every Thought, Action, and Observation
+│   ├── probe_models.py       which settings each OpenAI model accepts
+│   ├── run_experiments.py    runs the experiment suites
+│   ├── build_report.py       rebuilds the PDF report
+│   └── draw_graph.py         draws docs/react_graph.png
+├── experiments/
+│   ├── results/              every run (checks, scores, cost) and every full ReAct trace, plus summaries
+│   ├── charts/               one chart per comparison
+│   └── model_capabilities*.json   the model probe results
+├── docs/
+│   ├── experiment_report.pdf the experiment report (15 pages)
+│   ├── react_graph.png       the agent's graph
+│   └── app.png               screenshot
 ├── me/
-│   ├── about_business.pdf     business profile, policies, and catalog table (4 pages)
-│   ├── business_summary.txt   the same knowledge as plain text
-│   └── experiences.csv        the experience catalog: 20 experiences, the source of truth for catalog facts
-├── business_agent.ipynb       main code: every component, explained and demonstrated, plus the evaluations
-├── app.py                     the Gradio app, exported from the notebook (run this, or deploy it)
-├── tests.py                   offline test suite (+ optional live tests)
+│   ├── business_summary.txt  the business knowledge given to the agent
+│   └── experiences.csv       the catalog: 20 experiences, the source of truth for prices, seasons, group sizes
+├── tests_react.py, tests_tools.py, tests_experiments.py, tests_ui.py   offline tests (no API calls)
 ├── requirements.txt
-├── .env.example               copy to .env and add your key
-└── logs/                      created at run time, git-ignored (inquiries, feedback, reflection log)
+└── .env.example              copy to .env and add your key
 ```
 
-**The notebook is the source of truth.** Every code cell that starts with `# EXPORT` is copied, in order, into
-`app.py` by the notebook's export cell. Edit the notebook, rerun the export cell, and `tests.py` checks that the two
-stay in sync. `app.py` never reads the notebook at run time.
+`logs/` (inquiries, feedback, chat traces) and `experiments/sandbox_logs/` are created at run time and git-ignored.
 
 ---
 
@@ -60,125 +109,122 @@ python -m venv .venv
 .venv\Scripts\activate            # Windows PowerShell
 # source .venv/bin/activate       # macOS / Linux
 pip install -r requirements.txt
-
 copy .env.example .env            # Windows (cp on macOS / Linux), then put your key in .env
-python app.py                     # opens http://127.0.0.1:7860
+
+python app.py                     # the app: http://127.0.0.1:7860
+python scripts/chat.py            # or chat in the terminal and watch every step
 ```
 
-To explore how it works, open `business_agent.ipynb` and run it top to bottom.
+Open `react_agent.ipynb` and run it top to bottom for the full walkthrough. Everything except one live demo cell
+reads the saved results, so it runs offline and free.
 
-### Configuration (`.env`)
+```bash
+python -m pytest tests_react.py tests_tools.py tests_experiments.py tests_ui.py -q   # 163 offline tests
+python scripts/run_experiments.py --suite all --dry-run    # what the experiments would run, and the cost
+python scripts/run_experiments.py --suite prompt           # personas | prompt | config | iteration | all
+python scripts/build_report.py                             # rebuild docs/experiment_report.pdf
+```
 
-| Variable | Default | Purpose |
-|---|---|---|
-| `OPENAI_API_KEY` | — | required |
-| `AGENT_MODELS` | `gpt-6-luna,gpt-5.4-mini` | fallback chain for the agent |
-| `FAST_MODELS` | `gpt-6-luna,gpt-5.4-mini` | fallback chain for the router and reflection |
-| `REASONING_EFFORT` | `none` | sent to OpenAI as `reasoning_effort`; `none` keeps replies fast and cheap |
-| `REFLECTION_MODE` | `always` | `always`, `flags` (LLM review only when needed), or `off` |
-
-The key lives only in `.env`, which is git-ignored and never committed.
-
-### Model and cost
-
-Alaa runs on **`gpt-6-luna`**, OpenAI's most efficient model for focused, high-volume tasks ($0.10 per million
-input tokens, $0.01 cached, $0.50 per million output tokens), with `reasoning_effort="none"`: choosing a tool
-and answering a concierge question needs no long hidden reasoning, and Luna supports function calling in Chat
-Completions at that setting. `gpt-5.4-mini` is the backup if Luna is unavailable.
-
-A typical visitor message (router + agent with one tool call + reflection) uses roughly 15–25k input tokens,
-most of them the repeated system prompt, which OpenAI caches, and under 1k output tokens: well under one cent
-per message.
+The key lives only in `.env`, which is git-ignored.
 
 ---
 
 ## How it works
 
-```
-visitor message
-      │
-      ▼
- ┌─────────┐   GENERAL_QUESTION / LEAD_COLLECTION / FEEDBACK_UNKNOWN (+ secondary intent)
- │ Router  │── LLM classifier (JSON), with a rule-based fallback
- └────┬────┘
-      ▼
- ┌──────────────────────────────┐
- │ System prompt                │  persona + instructions + business knowledge (summary + PDF)
- │                              │  + routing guidance + session memory + today's date
- └────┬─────────────────────────┘
-      ▼
- ┌──────────────────────────────┐      ┌──────────────────────────────────────┐
- │ Agent loop (up to 6 rounds)  │◄────►│ Tools, validated and run in Python    │
- │ model decides which tools    │      │ search · compare · itinerary ·        │
- │ to call; real results return │      │ record_customer_interest · feedback   │
- └────┬─────────────────────────┘      └──────────────────────────────────────┘
-      ▼
- ┌──────────────────────────────┐
- │ Reflection                   │  rule checks + LLM review → approve or revise;
- │                              │  draft and final are logged
- └────┬─────────────────────────┘
-      ▼
-   reply (+ optional trace panels in the UI)
-```
+![The ReAct state graph](docs/react_graph.png)
 
-### 1. Business knowledge
-`business_summary.txt` and the text of `about_business.pdf` go into the system prompt. Experience details always
-come from `experiences.csv` through the tools, so the model is never asked to remember catalog facts. Details the
-company does not publish (transport, availability, accessibility, dietary suitability, safety, exact schedules,
-payment, refunds) are listed explicitly as "confirmed by the team on request".
+1. **Prepare.** The message is classified (general question, booking request, or undocumented question /
+   feedback), Auto mode picks the persona, and the prompt is assembled from labelled blocks: `# PERSONA`,
+   `# INSTRUCTIONS`, `# TOOLS` (every tool's description and arguments, as text), `# CONTEXT` (today's date),
+   `# CONVERSATION MEMORY` (the reference IDs saved so far), and `# BUSINESS KNOWLEDGE`.
+2. **Reason.** One model call. The model writes plain text, `Thought:` then `Action:` / `Action Input:` (JSON), or
+   `Final Answer:`. `parse_step()` detects the action: it handles bold labels, code fences, single-quoted dicts,
+   inline `tool({...})` calls, and "Action: Final Answer", and it **cuts off any Observation the model writes
+   itself**, so the model can never feed itself fake results (newer OpenAI models do not accept a stop sequence).
+3. **Act.** Python safety guards run first; then the arguments are validated against the tool's schema, the tool
+   runs, and its result is appended as an `Observation:` message. The loop returns to *Reason*.
+4. **Check.** A malformed step is sent back as a format error. A final answer that quotes catalog facts (an ID or
+   a price) before any tool ran is sent back by the **grounding check**, as an internal note the visitor never
+   sees. After 6 steps, `force_answer` asks for an answer from the observations so far.
+5. **Finish.** The answer is shown, and LangGraph's checkpointer keeps the conversation per `thread_id`, so the
+   next message, even to another persona, remembers it.
 
-### 2. Persona and instructions
-Kept separate and labelled in the prompt: `# PERSONA` (who Alaa is, its tone) and `# INSTRUCTIONS` (13 numbered
-rules: sources of truth, never invent, prices and dates, leads, unknown questions, tool honesty, bookings,
-privacy, scope, security, style, neutral wording for locals and visitors).
+### Tools
 
-### 3. Router
-Each message is classified into one of three intents, plus an optional secondary intent for mixed messages
-("book D03 — is it vegan?" is a lead **and** an unanswered question). The intent selects extra guidance for the
-agent. The LLM router runs on the fast model chain; if it fails, a rule-based router takes over.
+All tools are plain Python functions with MCP-style schemas (`name`, `description`, `inputSchema`,
+`outputSchema`), and each returns a `status`.
 
-### 4. Tools
-All five tools are defined in MCP style (`name`, `description`, `inputSchema`, `outputSchema`), validated against
-their schema before running, and always return a `status`. Every call is printed as a `[TOOL]` line; saves are
-also printed as `[PUSH]` notifications and written to JSON Lines files in `logs/`.
+| Tool | Required | What it does |
+|---|---|---|
+| `search_experiences` | — | filters and ranks the catalog (region, category, price, duration, group size, month, keywords) |
+| `compare_experiences` | `experience_ids` | side-by-side rows, group totals, cheapest and longest |
+| `create_itinerary` | `days` | a day-by-day plan within budget, season, and group size; revises plans that do not fit |
+| `budget_calculator` | `experience_ids` | exact per-person and group totals, with the calculation shown |
+| `season_check` | `experience_id`, `when` | whether an experience runs in a month or on a date (a date without a year means the next one) |
+| `record_customer_interest` | `email`, `name`, `group_size`, `message` | saves an inquiry and returns an `INQ-…` reference |
+| `record_feedback` | `question` | logs an undocumented question or feedback and returns an `FB-…` reference |
 
-| Tool | Required | Optional | Returns |
+---
+
+## Personas
+
+Each persona has a different task, prompt traits (tone, vocabulary, response style, values), and an LLM
+configuration chosen to support them.
+
+| Persona | Task | Voice | Configuration and why |
 |---|---|---|---|
-| `record_customer_interest` | `email`, `name`, `message` | — | `inquiry_id`, `saved_at`, `next_step` |
-| `record_feedback` | `question` | `kind` (unanswered_question, complaint, correction, suggestion, praise, other) | `feedback_id`, `saved_at`, `next_step` |
-| `search_experiences` | — | `query`, `interests`, `category`, `region`, `max_price_per_person`, `max_duration_hours`, `group_size`, `month`, `limit` | ranked `results`, `filters_applied`, what was excluded and why |
-| `compare_experiences` | `experience_ids` (2–6) | `group_size` | side-by-side rows, group totals, cheapest / longest, what is unknown for all |
-| `create_itinerary` | `days` | `budget_per_person`, `total_budget`, `group_size`, `interests`, `region`, `month`, `experience_ids`, `max_activities_per_day` | day-by-day plan, total per person, `feasible`, revisions and warnings |
+| **Alaa**, the warm host | welcome visitors, general questions, inquiries | warm, short, one clear next step | `gpt-5.4-mini`, temperature 0.6, top-p 0.9: natural, varied phrasing that stays steady |
+| **Rami**, the planner | itineraries, comparisons, budgets, seasons | precise, numbers first, calculation shown | `gpt-5.4-mini`, temperature 0.1, top-p 0.5: the same request gives the same plan and numbers |
+| **Layla**, the storyteller | bring places to life | vivid scene, then the facts | `gpt-5.4-mini`, temperature 1.1, presence 0.6, frequency 0.3: varied, less repetitive wording |
+| **Nadia**, the guardian | safety, accessibility, diet, feedback | careful, plain, 2–4 sentences | `gpt-5.4-nano`, temperature 0, top-p 0.3: conservative wording, cheapest model |
 
-`create_itinerary` keeps each day within one broad area, respects seasons and group sizes, and when requested
-experiences do not fit (over budget, out of season, an overnight stay on a one-day trip) it removes or replaces
-them and says why.
+All four run at `reasoning_effort="none"`: the model probe showed that the newer models **reject temperature and
+top-p at any higher effort**, and the experiments showed effort `low` costs 2.8× more for the same success. Top-k
+is not offered by the OpenAI API (it answers *"Unknown parameter: 'top_k'"*), so top-p is the nucleus control.
 
-### 5. Agent loop and memory
-The model receives the system prompt, the last 12 messages, and the tool schemas. Tool calls are executed in
-Python and their real results are sent back, for up to 6 rounds. A per-conversation `Session` remembers the
-visitor's name, preferences given to tools (group size, budget, month…), and the IDs actually saved — the only
-reference numbers Alaa is allowed to quote.
+**Auto mode** sends safety, accessibility, dietary, and feedback messages to Nadia; prices, plans, and comparisons
+to Rami; "tell me about / describe" to Layla; and everything else, including bookings, to Alaa. In the app you
+can also pick a persona yourself, or ask all four the same question in the *Compare personas* tab.
 
-### 6. Reflection
-Every draft is checked before it is sent:
+---
 
-- **Rule checks (no LLM):** invented or unsaved reference numbers, claims of a confirmed booking, "saved" claims
-  with nothing saved, unknown experience IDs, per-person prices that don't match the catalog, itinerary totals
-  that don't match the tool, a booking request with no request for an email, team promises with nothing
-  recorded, and wording that assumes the visitor is travelling.
-- **LLM review:** the draft is compared with the catalog facts, the tool results, and the saved IDs; the reviewer
-  approves it or returns a minimally corrected version.
-- **Safety net:** critical problems are re-checked on the final text and patched deterministically, even if the
-  LLM review failed or missed them.
+## Instructions block
 
-Draft, flags, verdict, and final reply are written to `logs/reflection_log.jsonl`.
+Personas decide how the agent sounds; the instructions decide what it must do, so the two never conflict
+(`check_conflicts()` scans every persona prompt for phrases that would contradict the rules).
 
-### 7. Interface
-A Gradio `ChatInterface` inside a branded layout: a side panel with the company, a map of Lebanon with its
-regions, and region shortcuts; the chat with example prompts; and two settings — reflection on/off and
-"show how Alaa answered", which adds collapsible panels for the route, each tool call, the model used, and the
-reflection verdict.
+- **20 numbered rules, one purpose each**, grouped as facts, numbers and dates, tools, and honesty and scope.
+- **Explicit input and output**: what the agent receives, and the exact ReAct format the parser expects.
+- **A worked example** inside the block (a budget and season question, with real tool results), plus three more
+  for the few-shot variant.
+
+The rules were improved from evidence. **Version 2** added two rules for failures that kept appearing in the
+experiments (giving the visitor the reference ID, and not asking for details an inquiry does not need): success on
+those tasks went from 58% to 92%. **Version 3**, after testing the app by hand, made the number of people required
+for an inquiry, in the rules and in the tool itself, with a Python check that the visitor actually gave it.
+
+---
+
+## Experiments and results
+
+Every run is logged with its checks, judge scores, tokens, cost, latency, and full ReAct trace in
+`experiments/results/`. The write-up, with a table and chart for every comparison, is
+**`docs/experiment_report.pdf`**.
+
+| Finding | Evidence |
+|---|---|
+| The instructions block matters most | success 94% with it, 62% without; v1 → v2 rules: 58% → 92% on the targeted tasks |
+| Chain of thought keeps the format | same success without it, but format slips rise from 2 to 10 |
+| Few-shot teaches what rules do not state | the only prompt variant at 100% |
+| Instructions in the message are followed most closely | fewest model calls (2.1) and grounding checks (2 vs 9), fastest answers |
+| Temperature barely changes correctness | 100% success from 0 to 1.6; it changes wording, not totals |
+| Penalties cut repetition | repeated phrases 8.6% → 4.8% (Layla's settings) → 2.0% (high) |
+| Smaller can be enough | `gpt-5.4-nano` matches `gpt-5.4-mini` at a third of the cost; `gpt-4o-mini` fails half the tasks |
+| Personas behave differently where it counts | Auto mode picked the intended persona 100% of the time; Nadia logged praise the host only acknowledged |
+
+The best combination for this use case: Auto mode with four personas, chain of thought, few-shot examples, the
+version 3 instructions, `gpt-5.4-mini` (`nano` for Nadia), reasoning effort `none`, moderate penalties for Layla
+only, and at least 400 output tokens.
 
 ---
 
@@ -186,73 +232,30 @@ reflection verdict.
 
 | Risk | Measure |
 |---|---|
-| Invented prices, inclusions, availability | Catalog facts only via tools; reflection checks every price against the catalog |
-| Fake confirmations | "Inquiry, not reservation" rule; booking-claim detection and patching |
-| Invented reference numbers | Only IDs returned by a successful tool call may be quoted; anything else is removed |
-| Invented contact details | **Python refuses** an inquiry whose email or name the visitor never typed, whatever the model sends |
-| A cluttered feedback log | **Python refuses** `record_feedback` unless the message is an unanswered question about the services (by the router, or by its wording: transport, diet, access, payment…) or feedback |
-| Duplicate records | The same inquiry or question sent twice while the app is running returns the existing ID |
-| Prompt injection | Visitor messages are treated as data; rule 11 and an injection test scenario |
-| Privacy | Only name, email, and request are collected; emails are masked in all printed logs; `logs/` is git-ignored |
-| API limits and outages | Model fallback chains; a slow or overloaded model hands over within 50 s; rate limits are waited out; an exhausted quota rests that model for an hour |
-
----
-
-## Evaluation
-
-All evaluations are in the notebook and can be rerun.
-
-Results from the final full run of `business_agent.ipynb` (15 October 2026), every answer by `gpt-6-luna`
-(`reasoning_effort="none"`), typically 3–8 seconds per turn. The outputs are saved in the notebook.
-
-| Evaluation | Cases | Result |
-|---|---|---|
-| Router, rule-based | 43 labelled messages (8 categories, incl. mixed, adversarial, Arabic and French) | 41/43 (95.3%) |
-| Router, LLM | same 43 | **43/43 (100%)**, in all five OpenAI runs |
-| Agent, end to end | 19 multi-turn scenarios (every tool, leads, unknowns, memory, typos, scope, injection) | **19/19** |
-| Reflection, rules only | 10 problematic and control drafts | 9/10 (inventing transport needs the LLM review) |
-| Reflection, rules + LLM | same 10 | **10/10** |
-| Offline test suite | `pytest tests.py` | 179 passed, 3 live tests skipped by default |
-
-How the evaluation shaped the agent, run by run:
-
-- **Booking + question in one message.** In the first OpenAI run, a visitor booked D03, asked whether it is
-  vegan, and gave name and email; Alaa logged the question but not the inquiry. The lead guidance now says a
-  separate question never blocks saving, and both have been saved in every run since.
-- **Over-eager feedback logging.** The small model sometimes used `record_feedback` for things that are not team
-  questions: a booking still waiting for an email, a typo ID (D50), a restaurant request. Each prompt fix moved
-  the problem to another scenario, so it is now enforced in Python: the call is refused unless the router saw an
-  unanswered question or feedback, or the message itself mentions something only the team can answer. In the
-  final run the model tried three times (a booking still missing its email, a weather question, a restaurant
-  request); Python refused each one and Alaa answered directly.
-- **Invented contact details.** In one run the model tried to save an inquiry with a name and email the visitor
-  had not given; Python refused it and Alaa asked for the real details.
-- **Reflection.** The reviewer first rewrote correct drafts and added details nobody asked for. Once its prompt
-  defined each problem category and asked it to fix only real problems, it corrected all eight faulty drafts and
-  left both correct ones untouched. A live chat then showed it deleting true facts (the languages offered, the
-  itinerary service) because it could only see the catalog; it now also receives the business summary.
-
-```bash
-python -m pytest tests.py -q                       # offline: no API calls
-RUN_LIVE=1 python -m pytest tests.py -q -s         # also runs the live router / agent / reflection checks
-```
-(PowerShell: `$env:RUN_LIVE="1"; python -m pytest tests.py -q -s`)
+| Invented prices, seasons, totals | catalog facts only via tools; `budget_calculator` and `season_check` do the arithmetic; the grounding check sends back answers that quote catalog facts before any tool ran |
+| Fake confirmations | "inquiry, not reservation" rule; checked on every experiment answer |
+| Invented reference numbers | only IDs a tool returned in the conversation may be quoted (kept in the conversation memory) |
+| Invented contact details or group size | **Python refuses** an inquiry whose email, name, or number of people the visitor never gave |
+| A cluttered feedback log | **Python refuses** `record_feedback` unless the message is an undocumented question or real feedback |
+| Fake tool results | any `Observation:` the model writes itself is cut off by the parser |
+| Prompt injection | visitor messages are treated as data; tested in the experiments |
+| Privacy | only a name, an email, the group size, and the request are collected; emails are masked in printed logs; `logs/` is git-ignored |
 
 ---
 
 ## Limitations
 
-- **Inquiries, not bookings.** There is no real availability calendar or payment; the team confirms by email.
-- **Logs are local files.** Fine for a demo; a production version would send inquiries to a CRM or email.
-- **The catalog is the limit of Alaa's knowledge.** Questions about transport, accessibility, or exact
-  schedules are logged for the team rather than answered.
-- **Small, fast model.** `gpt-6-luna` without extended reasoning keeps costs low; the rule checks and the
-  reflection step catch most of the mistakes a lighter model makes, but not all of them.
-- **Itinerary travel times are not modelled**, only kept sensible by grouping each day within one area.
+- **Inquiries, not bookings.** There is no live availability or payment; the team confirms by email.
+- **Small samples.** The experiments use 4 to 20 runs per variant: large effects are clear, small ones are not.
+- **The judge is generous and related to the agent** (`gpt-5.4-mini` judging `gpt-5.4-mini`).
+- **Grounding costs an extra model call** in about 45% of runs, because the business summary in the prompt
+  already lists prices that the model is tempted to quote.
+- **Auto mode uses rules** to pick the persona; unusual phrasings can land on the host.
+- **Logs are local files.** A production version would send inquiries to a CRM or email.
 
 ---
 
 ## Team
 
 Sara (founder and experience curator), Ahmad (partnerships and operations), Khaled (guest experience: reviews
-inquiries and confirms bookings), and Alaa, the AI concierge.
+inquiries and confirms bookings), and the four AI personas: Alaa, Rami, Layla, and Nadia.

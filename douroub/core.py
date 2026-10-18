@@ -18,7 +18,6 @@ from pathlib import Path
 
 import pandas as pd
 from dotenv import load_dotenv
-from pypdf import PdfReader
 
 ROOT = Path(__file__).resolve().parent.parent
 ME_DIR = ROOT / "me"
@@ -249,18 +248,12 @@ def call_model(messages: list, config: LLMConfig, client=None, attempts: int = 4
 
 # --------------------------------------------------------------------------- business knowledge
 SUMMARY_PATH = ME_DIR / "business_summary.txt"
-PDF_PATH = ME_DIR / "about_business.pdf"
 CATALOG_PATH = ME_DIR / "experiences.csv"
 
 
 @lru_cache(maxsize=1)
 def load_summary() -> str:
     return SUMMARY_PATH.read_text(encoding="utf-8").strip()
-
-
-@lru_cache(maxsize=1)
-def load_pdf_text() -> str:
-    return "\n".join(page.extract_text() or "" for page in PdfReader(PDF_PATH).pages).strip()
 
 
 @lru_cache(maxsize=1)

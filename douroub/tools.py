@@ -1,8 +1,14 @@
-"""The agent's tools: the five C3 tools (with their MCP-style schemas and validation) plus two new ones,
-budget_calculator and season_check, and the two checks Python enforces whatever the model decides.
+"""The agent's seven tools, with MCP-style schemas and validation, and the checks Python enforces whatever the
+model decides.
 
-Every tool is a plain Python function that returns a dict with a "status". The ReAct loop calls them through
-`run_tool()`, which validates the arguments against the tool's inputSchema before running it.
+    record_customer_interest, record_feedback   save an inquiry / an unanswered question or feedback for the team
+    search_experiences, compare_experiences       find and compare catalog experiences
+    create_itinerary                              build a day-by-day plan within budget, season and group size
+    budget_calculator, season_check               exact totals and season checks, so the model never guesses them
+
+Every tool is a plain Python function that returns a dict with a "status". The ReAct loop's `act` node calls
+them through `guarded_execute()`: the safety checks first, then `execute_tool()`, which validates the arguments
+against the tool's inputSchema before running it.
 """
 from __future__ import annotations
 
@@ -680,9 +686,6 @@ TOOL_FUNCTIONS = {"record_customer_interest": record_customer_interest, "record_
                   "search_experiences": search_experiences, "compare_experiences": compare_experiences,
                   "create_itinerary": create_itinerary}
 
-OPENAI_TOOLS = [{"type": "function", "function": {"name": s["name"], "description": s["description"],
-                                                  "parameters": s["inputSchema"]}}
-                for s in TOOL_SPECS]
 SPEC_BY_NAME = {s["name"]: s for s in TOOL_SPECS}
 
 
@@ -739,7 +742,6 @@ def validate_arguments(schema: dict, args: dict) -> tuple:
     return clean, errors
 
 
-TOOL_CALL_LOG = []  # in-memory record of every tool execution in this session
 
 
 def _redact(args: dict) -> dict:
@@ -775,7 +777,6 @@ def execute_tool(name: str, arguments) -> dict:
                               "message": f"{type(exc).__name__}: {exc}"[:300]}
     entry = {"timestamp": _now_iso(), "tool": name, "arguments": _redact(args), "status": result.get("status"),
              "error": result.get("error"), "latency_s": round(time.perf_counter() - start, 3)}
-    TOOL_CALL_LOG.append(entry)
     if VERBOSE:
         print(f"[TOOL] {name}({json.dumps(entry['arguments'], ensure_ascii=False)[:160]}) -> {entry['status']}"
               + (f" ({entry['error']})" if entry["error"] else ""))
@@ -831,9 +832,6 @@ def group_size_from_visitor(group_size, visitor_text: str) -> bool:
     return any(v == n and re.search(pattern, text) for pattern, v in _GROUP_PHRASES)
 
 
-GUARD_ERRORS = {"details_not_from_visitor", "not_feedback"}  # calls Python refused before running the tool
-
-
 def is_loggable(message: str, route=None) -> bool:
     """May this visitor message be logged with record_feedback?
 
@@ -869,7 +867,7 @@ def guarded_execute(name: str, arguments, visitor_text: str, message: str = "", 
     return execute_tool(name, arguments)
 
 
-# =============================================================================================== new in C4
+# =============================================================================================== exact arithmetic and seasons
 def budget_calculator(experience_ids: list, group_size: int = 1, budget_per_person: float = None,
                       total_budget: float = None) -> dict:
     """Exact price arithmetic for a set of experiences, so the model never does sums in its head."""
@@ -979,8 +977,6 @@ TOOL_SPECS += [
 ]
 TOOL_FUNCTIONS |= {"budget_calculator": budget_calculator, "season_check": season_check}
 SPEC_BY_NAME = {s["name"]: s for s in TOOL_SPECS}
-OPENAI_TOOLS = [{"type": "function", "function": {"name": s["name"], "description": s["description"],
-                                                  "parameters": s["inputSchema"]}} for s in TOOL_SPECS]
 
 
 def tool_catalog_text() -> str:

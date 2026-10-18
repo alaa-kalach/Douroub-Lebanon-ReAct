@@ -1,4 +1,4 @@
-"""Intent router reused from the C3 assistant: an LLM classifier with a rule-based fallback.
+"""Intent router: an LLM classifier with a rule-based fallback.
 
 In the ReAct agent it serves two purposes: choosing a persona in "Auto" mode (see personas.choose_persona) and
 deciding whether a message may be logged with record_feedback (tools.is_loggable).
