@@ -6,7 +6,6 @@ reflection. Built from the saved results in experiments/results/, so it never ca
 from __future__ import annotations
 
 import tempfile
-from datetime import date
 from pathlib import Path
 
 import pandas as pd
@@ -284,9 +283,6 @@ def build(out: Path = OUT) -> Path:
                             ("BOTTOMPADDING", (0, 0), (-1, -1), 8), ("LEFTPADDING", (0, 0), (-1, -1), 10)]))
     story += [st, Spacer(1, 12), Paragraph("Headline findings", ST["h1"])]
     story += [Paragraph(h, ST["bullet"], bulletText="•") for h in HEADLINES]
-    story += [Spacer(1, 4), Paragraph(
-        f"Report generated on {date.today():%d %B %Y} from the saved results in <i>experiments/results/</i>. "
-        "Inquiries and feedback created during experiments went to a sandbox log.", ST["small"])]
 
     # ---- method
     story += [PageBreak(), Paragraph("1. What was tested", ST["h1"]), Paragraph(
