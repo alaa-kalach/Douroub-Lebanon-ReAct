@@ -1,4 +1,4 @@
-# Douroub Lebanon: a hand-built ReAct agent with four personas
+# Douroub Lebanon: a ReAct agent with four personas
 
 **Douroub Lebanon** (دروب لبنان, "paths of Lebanon") is a small Lebanese experiences company: locally hosted
 village walks, food and craft workshops, heritage days, nature hikes, coastal outings, and mountain stays across
