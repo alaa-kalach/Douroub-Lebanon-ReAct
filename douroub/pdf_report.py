@@ -42,7 +42,7 @@ HEADLINES = [
     "<b>Temperature barely changes correctness.</b> 100% success from 0 to 1.6; it changes wording and which numbers "
     "are mentioned. Repetition penalties clearly cut repeated phrases (8.6% to 2.0%).",
     "<b>Smaller can be enough.</b> gpt-5.4-nano matched gpt-5.4-mini at about a third of the cost; gpt-4o-mini failed "
-    "half the tasks by skipping tools.",
+    "half the tasks, mostly by answering without using a tool.",
 ]
 
 SECTIONS = [  # (section title, intro, [(suite, factor, heading, finding)])
@@ -82,12 +82,13 @@ SECTIONS = [  # (section title, intro, [(suite, factor, heading, finding)])
          "At 1.6 only 33% of tasks gave the same numbers in all three repeats, against 67% at lower temperatures: "
          "temperature changes which figures are mentioned, not the totals ($345 was right in every run)."),
         ("config", "top_p", "Top-p (on the storyteller)",
-         "All variants succeed; lower top-p gives shorter answers (184 vs 218 words) with less repetition. The effect "
-         "is smaller than temperature's. Top-k is not offered by any OpenAI model, so top-p is the nucleus control."),
+         "All variants succeed; lower top-p gives shorter answers (184 vs 218 words) with slightly less repetition, a "
+         "small effect. Top-k is not offered by any OpenAI model, so top-p is the nucleus control."),
         ("config", "penalties", "Presence and frequency penalties (on the storyteller)",
          "The clearest sampling effect: repeated three-word phrases fall from 8.6% with no penalties to 4.8% with "
          "Layla's settings and 2.0% with high penalties, and answers get shorter. High penalties cost a little "
-         "helpfulness and grounding, so Layla's moderate values are the balance."),
+         "helpfulness and grounding (4.75), while Layla's moderate values keep both at 5.0. The judge's persona score "
+         "varied from 4.0 to 5.0 with no clear direction; with 4 runs per setting that is within the judge's noise."),
         ("config", "max tokens", "Maximum output tokens",
          "A 150-token limit cut off all three answers mid-sentence and helpfulness fell from 5.0 to 2.3, even though "
          "the checks passed because the key numbers came early. 400 tokens was already enough."),
@@ -102,9 +103,9 @@ SECTIONS = [  # (section title, intro, [(suite, factor, heading, finding)])
          "On gpt-4.1-mini, one of the few models that accepts a stop sequence: no invented observations either way. "
          "Across all runs no model ever wrote its own Observation, so the parser's cut-off is a safety net."),
     ]),
-    ("Instructions iteration", "Two failures repeated across every suite: the visitor was rarely given the feedback "
-     "reference (task T07), and with experience, name and email known the agent asked for a date instead of saving "
-     "the inquiry (task T19). Version 2 adds one single-purpose rule for each.", [
+    ("Instructions iteration", "Two failures kept repeating: across the suites the visitor was rarely given the "
+     "feedback reference (task T07), and in the persona runs, with experience, name and email known, the agent asked "
+     "for a date instead of saving the inquiry (task T19). Version 2 adds one single-purpose rule for each.", [
         ("iteration", "rules version", "Instructions v1 vs v2 (three repeats per task)",
          "Success went from 58% to 92%: T07 from 0/3 to 2/3, T19 from 1/3 to 3/3, and the two control tasks stayed "
          "at 3/3. The remaining failure gave the reference but did not say the information is undocumented."),
@@ -115,26 +116,27 @@ BEST = [
     ("Personas", "Auto mode with four personas", "right persona 100% of the time; the guardian logs what the host skipped"),
     ("Reasoning style", "Chain of thought (Thought lines)", "same success, 5x fewer format slips"),
     ("Examples", "Few-shot", "the only variant at 100%; examples teach behaviours the rules do not state"),
-    ("Instructions", "Version 2, block kept", "62% without the block; 58% to 92% from v1 to v2 on targeted tasks"),
+    ("Instructions", "Version 3 (v2 + the number of people required)",
+     "62% without the block; 58% to 92% from v1 to v2 on targeted tasks; v3 fixes a gap found by hand"),
     ("Placement", "System prompt (in-message close behind)", "in-message was faster with fewer calls, equal success"),
     ("Model", "gpt-5.4-mini; gpt-5.4-nano for the guardian", "nano matches mini at a third of the cost"),
     ("Reasoning effort", "none, with per-persona sampling", "'low' costs 2.8x and drops temperature and top-p"),
-    ("Penalties", "Moderate, storyteller only", "repetition 8.6% to 4.8% without losing quality"),
+    ("Penalties", "Moderate, storyteller only", "repetition 8.6% to 4.8%, helpfulness and grounding unchanged"),
     ("Max tokens", "400 or more", "150 cut every answer"),
 ]
 
 REFLECTION = [
     ("Which persona gave the most helpful or natural results?",
      "Alaa, the warm host, was the most natural: 5/5 persona fidelity on every question she was given, short friendly "
-     "answers, and on her own she passed 95% of the full test set. 'Most helpful' depended on the task, which is the "
+     "answers, and on her own she passed 95% of the full test set in one run (85% in another). 'Most helpful' depended on the task, which is the "
      "case for personas with different jobs. Rami was the most trustworthy for numbers: he always showed the "
      "calculation, and the budget total was right in all 43 runs of that task. Nadia reliably logged praise and "
      "undocumented questions that the generalist host only acknowledged. Layla was the least natural at first: her "
      "early answers were one vivid sentence followed by a fact sheet, and 91% of her first drafts answered from the "
      "background text before searching the catalog (4% for Rami), which is why the grounding check exists. Her "
-     "repetition penalties do their job, roughly halving repeated phrases."),
+     "repetition penalties do their job, roughly halving repeated phrases without hurting helpfulness."),
     ("Which prompt and configuration combination performed best?",
-     "Chain of thought, few-shot examples and the version 2 instructions block in the system prompt, with every "
+     "Chain of thought, few-shot examples and the version 3 instructions block in the system prompt, with every "
      "persona on reasoning effort 'none' so its sampling settings actually apply, gpt-5.4-mini for the three main "
      "personas and gpt-5.4-nano for the guardian. Two surprises: temperature barely affected correctness (100% at every "
      "value from 0 to 1.6), and reasoning effort 'low' was strictly worse here, costing 2.8x for the same success while "
@@ -160,11 +162,11 @@ REFLECTION = [
      "a fix that backfired: the first grounding check was read by the model as the visitor speaking, until it was "
      "reworded as an internal check that must be followed by an action. Fourth, evaluating the evaluator: two early "
      "'agent failures' were a too-strict check and a judge that saw only part of a tool result. Fifth, small samples: "
-     "with 8 to 20 runs per variant one task moves a rate by 5 to 12 points, so small differences were treated as noise."),
+     "with 3 to 20 runs per variant one task moves a rate by 5 points or more, so small differences were treated as noise."),
 ]
 
 LIMITATIONS = [
-    "Sample sizes are small (4 to 20 runs per variant): the large effects are clear, the small ones are not.",
+    "Sample sizes are small (3 to 20 runs per variant): the large effects are clear, the small ones are not.",
     "The judge (gpt-5.4-mini) is generous and related to the agent; scores cluster at 4.5 to 5. A judge from another "
     "model family and blind pairwise comparisons would separate variants better.",
     "Grounding costs an extra model call in 45% of runs; keeping prices out of the business summary would force a tool "
@@ -293,6 +295,9 @@ def build(out: Path = OUT) -> Path:
         "each is defined by prompt traits and a matching LLM configuration:", ST["body"])]
     personas = report.persona_table().data[["persona", "task", "model", "temperature", "top_p",
                                             "presence / frequency penalty", "max tokens", "reasoning effort"]]
+    personas = personas.rename(columns={"temperature": "temp.", "top_p": "top-p",
+                                        "presence / frequency penalty": "penalties (pres. / freq.)",
+                                        "reasoning effort": "effort"})
     story += [table(personas, widths=[3.0 * cm, 5.4 * cm, 1.9 * cm, 1.3 * cm, 1.0 * cm, 1.7 * cm, 1.2 * cm,
                                       WIDTH - 15.5 * cm]), Spacer(1, 8)]
     story += [Paragraph(
@@ -309,7 +314,9 @@ def build(out: Path = OUT) -> Path:
         "a tool did not return, never 'booking confirmed', and the loop ended with an answer). <i>Success</i> means every "
         "check passed. An LLM judge (gpt-5.4-mini, temperature 0) scored persona fidelity, helpfulness and grounding "
         "from 1 to 5, given the persona and the full tool results. Every run also logs model calls, format errors and "
-        "slips, grounding checks, tokens, cost and latency.", ST["body"])]
+        "slips, grounding checks, tokens, cost and latency.", ST["body"]), Paragraph(
+        "<b>Instructions version.</b> Sections 2 to 4 used the first version of the instructions; section 5 compares "
+        "it with version 2, and describes version 3, which the agent uses now.", ST["body"])]
 
     # ---- results
     with tempfile.TemporaryDirectory() as tmp:
@@ -339,9 +346,10 @@ def build(out: Path = OUT) -> Path:
             if title == "LLM configuration":
                 cap = report.capability_table().reset_index().rename(columns={"index": "setting"})
                 story += [PageBreak(), Paragraph("Which settings each model accepts", ST["h2"]), Paragraph(
-                    "Measured by sending every setting to every model (scripts/probe_models.py). Top-k does not exist "
-                    "in the OpenAI API, and on the newer models sampling settings only work with reasoning effort "
-                    "'none'.", ST["body"]), table(cap, first_col_ratio=0.30)]
+                    "Measured by sending every setting to every model (scripts/probe_models.py). The single settings "
+                    "were sent at each model's default reasoning effort, which is why gpt-6-luna rejects temperature "
+                    "there but accepts it with effort 'none' (rows below). Top-k does not exist in the OpenAI API, and "
+                    "on the newer models sampling settings only work with reasoning effort 'none'.", ST["body"]), table(cap, first_col_ratio=0.30)]
             if title == "Instructions iteration":
                 runs = ex.load_runs("iteration")
                 pivot = runs.pivot_table(index="task", columns="arm", values="success", aggfunc="sum").astype(int)

@@ -246,7 +246,7 @@ only, and at least 400 output tokens.
 ## Limitations
 
 - **Inquiries, not bookings.** There is no live availability or payment; the team confirms by email.
-- **Small samples.** The experiments use 4 to 20 runs per variant: large effects are clear, small ones are not.
+- **Small samples.** The experiments use 3 to 20 runs per variant: large effects are clear, small ones are not.
 - **The judge is generous and related to the agent** (`gpt-5.4-mini` judging `gpt-5.4-mini`).
 - **Grounding costs an extra model call** in about 45% of runs, because the business summary in the prompt
   already lists prices that the model is tempted to quote.
