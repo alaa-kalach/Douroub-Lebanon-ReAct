@@ -100,7 +100,7 @@ def test_setup_turns_run_in_the_same_conversation():
     ex._sandbox()
     client = FakeClient("Final Answer: Lovely choice! What is your name and email?",
                         'Thought: save\nAction: record_customer_interest\nAction Input: {"name": "Omar Haddad", '
-                        '"email": "omar.haddad@example.com", "message": "Batroun sunset kayak (D20) for 2 people"}',
+                        '"email": "omar.haddad@example.com", "group_size": 2, "message": "Batroun sunset kayak (D20)"}',
                         "Final Answer: Saved, Khaled will email you.")
     row, _ = ex.run_one(ex.Arm("routing", "Auto"), "T19", 1, "personas", "r1", use_judge=False, client=client)
     assert row["success"], row["failed_checks"]

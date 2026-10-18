@@ -34,19 +34,20 @@ class PromptVariant:
     placement:    "system" = persona and instructions in the system message; "message" = the system message
                   holds only the persona, and the instructions travel inside the visitor's message.
     instructions: False drops the instructions block entirely (to measure what it changes).
-    rules:        which version of the rules (1 = as first written, 2 = with two rules added after the experiments).
+    rules:        which version of the rules (1 = as first written, 2 = two rules added after the experiments,
+                  3 = the inquiry rule also requires the number of people, added after testing the app).
     """
     thought: bool = True
     shots: str = "one"
     placement: str = "system"
     instructions: bool = True
-    rules: int = 2                 # instructions version: 1 = before the experiment-driven fixes, 2 = after
+    rules: int = 3                 # instructions version: 1 = first, 2 = after the experiments, 3 = after app testing
 
     def short(self) -> str:
         bits = ["CoT" if self.thought else "no-CoT", f"{self.shots}-shot", f"in-{self.placement}"]
         if not self.instructions:
             bits.append("no-instructions")
-        elif self.rules != 2:
+        elif self.rules != 3:
             bits.append(f"rules v{self.rules}")
         return " / ".join(bits)
 

@@ -56,10 +56,17 @@ def _clean(text) -> str:
     return " ".join(str(text or "").split())
 
 
-def record_customer_interest(email: str, name: str, message: str) -> dict:
-    """Validate and save a booking inquiry (lead) to logs/inquiries.jsonl."""
+def record_customer_interest(email: str, name: str, message: str, group_size: int = None) -> dict:
+    """Validate and save a booking inquiry (lead) to logs/inquiries.jsonl. The team needs the number of people
+    to check availability and quote a price, so an inquiry without it is not saved."""
     email, name, message = _clean(email).lower(), _clean(name), _clean(message)[:2000]
     problems = {}
+    try:
+        group_size = int(group_size) if group_size is not None else None
+    except (TypeError, ValueError):
+        group_size = None
+    if group_size is None or not 1 <= group_size <= 50:
+        problems["group_size"] = "the number of people (1-50) is required: ask the visitor how many will join"
     if name.lower() in PLACEHOLDERS or len(name) < 2:
         problems["name"] = "the visitor's real name is required"
     elif len(name) > 100:
@@ -77,14 +84,14 @@ def record_customer_interest(email: str, name: str, message: str) -> dict:
         return {"status": "success", "inquiry_id": _RECENT[key], "duplicate": True,
                 "message": "This inquiry was already recorded earlier in the conversation."}
     record = {"inquiry_id": _new_id("INQ"), "timestamp": _now_iso(), "name": name, "email": email,
-              "message": message, "status": "new"}
+              "group_size": group_size, "message": message, "status": "new"}
     try:
         _append_jsonl("inquiries.jsonl", record)
     except OSError as exc:
         return {"status": "error", "error": "storage_failed",
                 "message": f"Inquiry could not be saved ({type(exc).__name__}). Do not tell the visitor it was saved."}
     _RECENT[key] = record["inquiry_id"]
-    push(f"New inquiry {record['inquiry_id']} from {name} <{mask_email(email)}>: {message[:150]}")
+    push(f"New inquiry {record['inquiry_id']} from {name} <{mask_email(email)}>, {group_size} people: {message[:150]}")
     return {"status": "success", "inquiry_id": record["inquiry_id"], "saved_at": record["timestamp"],
             "next_step": "Khaled from the team will reply by email to confirm availability, dates, and the "
                          "final price. This is an inquiry, not a confirmed reservation."}
@@ -574,13 +581,16 @@ TOOL_SPECS = [
     {
         "name": "record_customer_interest",
         "description": ("Save a visitor's booking inquiry so the team can follow up by email. Call ONLY when you "
-                        "have the visitor's real name, a valid email, and what they are interested in. Returns an "
-                        "inquiry_id. An inquiry is not a confirmed reservation."),
-        "inputSchema": {"type": "object", "required": ["email", "name", "message"], "additionalProperties": False,
+                        "have the visitor's real name, a valid email, the number of people, and what they are "
+                        "interested in. Returns an inquiry_id. An inquiry is not a confirmed reservation."),
+        "inputSchema": {"type": "object", "required": ["email", "name", "message", "group_size"],
+                        "additionalProperties": False,
                         "properties": {
                             "email": {"type": "string", "format": "email", "description": "the visitor's email address"},
                             "name": {"type": "string", "description": "the visitor's name as they gave it"},
-                            "message": {"type": "string", "description": "what they want: experience IDs, dates, group size, notes"}}},
+                            "group_size": {"type": "integer", "minimum": 1, "maximum": 50,
+                                           "description": "how many people will join, as the visitor said it"},
+                            "message": {"type": "string", "description": "what they want: experience IDs, dates, notes"}}},
         "outputSchema": {"type": "object", "properties": _RESULT_STATUS | {
             "inquiry_id": {"type": "string", "description": "e.g. INQ-20261011-A1B2C3"},
             "saved_at": {"type": "string", "description": "UTC timestamp"},
@@ -798,6 +808,29 @@ def lead_details_not_from_visitor(args: dict, visitor_text: str) -> list:
     return missing
 
 
+NUMBER_WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
+                "ten": 10, "eleven": 11, "twelve": 12, "fifteen": 15, "twenty": 20}
+_GROUP_PHRASES = [  # (pattern, people) for the ways visitors say a group size without a number
+    (r"\b(just me|only me|myself|alone|solo|by myself|one person|for me)\b", 1),
+    (r"\b(couple|the two of us|both of us|my (wife|husband|partner|friend|sister|brother|mother|father|mom|dad|"
+     r"son|daughter|fianc[eé]e?) and (i|me)|me and my \w+|\w+ and (i|me))\b", 2),
+]
+
+
+def group_size_from_visitor(group_size, visitor_text: str) -> bool:
+    """Did the visitor state this number of people (as a digit, a number word, or a phrase like 'my sister and
+    me')? Stops the model from assuming a group size the visitor never gave."""
+    try:
+        n = int(group_size)
+    except (TypeError, ValueError):
+        return True  # a missing or malformed value is left to the argument validation
+    text = visitor_text.casefold()
+    if re.search(rf"(?<![\d.$]){n}(?![\d.])", text) or any(v == n and re.search(rf"\b{w}\b", text)
+                                                            for w, v in NUMBER_WORDS.items()):
+        return True
+    return any(v == n and re.search(pattern, text) for pattern, v in _GROUP_PHRASES)
+
+
 GUARD_ERRORS = {"details_not_from_visitor", "not_feedback"}  # calls Python refused before running the tool
 
 
@@ -824,12 +857,15 @@ def guarded_execute(name: str, arguments, visitor_text: str, message: str = "", 
                             "documents cannot answer, and not feedback, so it must not be logged. Answer it directly: "
                             "give general information, ask for missing details, or ask which experience they meant.")}
     if name == "record_customer_interest":
-        missing = lead_details_not_from_visitor(_parse_args(arguments), visitor_text)
+        args = _parse_args(arguments)
+        missing = lead_details_not_from_visitor(args, visitor_text)
+        if args.get("group_size") is not None and not group_size_from_visitor(args["group_size"], visitor_text):
+            missing.append("number of people")
         if missing:
             print(f"[TOOL] record_customer_interest -> refused (not given by the visitor: {', '.join(missing)})")
             return {"status": "error", "error": "details_not_from_visitor", "missing": missing,
                     "message": (f"Tool NOT executed: the visitor has not given their {' and '.join(missing)} in this "
-                                "conversation. Ask the visitor for it. Never invent, guess, or complete contact details.")}
+                                "conversation. Ask the visitor for it. Never invent, guess, or complete these details.")}
     return execute_tool(name, arguments)
 
 

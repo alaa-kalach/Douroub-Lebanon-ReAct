@@ -51,8 +51,14 @@ NEW_IN_V2 = {
         "a date is optional.",
 }
 RULES_V2 = [r for rule in RULES_V1 for r in ([rule, NEW_IN_V2[rule]] if rule in NEW_IN_V2 else [rule])]
-RULES = RULES_V2
-RULE_VERSIONS = {1: RULES_V1, 2: RULES_V2}
+# Version 3 (after testing the app by hand): v2's "an inquiry needs only a name, an email, and what the visitor
+# wants" let the agent save an inquiry without the number of people, which the team needs to quote a price.
+V2_INQUIRY_RULE = NEW_IN_V2["Call record_customer_interest only with a name and an email the visitor actually typed; ask for whatever is missing."]
+V3_INQUIRY_RULE = ("An inquiry needs a name, an email, the number of people, and what the visitor wants (details from "
+                   "earlier messages count); ask for everything missing in one message. A date is optional.")
+RULES_V3 = [V3_INQUIRY_RULE if r == V2_INQUIRY_RULE else r for r in RULES_V2]
+RULES = RULES_V3
+RULE_VERSIONS = {1: RULES_V1, 2: RULES_V2, 3: RULES_V3}
 
 INPUTS = """\
 ## Input you receive
@@ -141,12 +147,12 @@ def _render(steps, with_thought: bool) -> str:
     return "\n".join(lines)
 
 
-def build_instructions(with_thought: bool = True, shots: str = "one", version: int = 2) -> str:
+def build_instructions(with_thought: bool = True, shots: str = "one", version: int = 3) -> str:
     """The full instructions block.
 
     shots: "zero" (no examples; for the zero-shot experiment), "one" (the worked example; the default), or
     "few" (the worked example plus three more). version: 1 = the rules used in the first experiments, 2 = with the
-    two rules added after them (the default)."""
+    two rules added after them, 3 = the inquiry rule also requires the number of people (the default)."""
     rules = "\n".join(f"{i}. {rule}" for i, rule in enumerate(RULE_VERSIONS[version], 1))
     parts = ["## Rules (one purpose each)\n" + rules, INPUTS, FORMAT_WITH_THOUGHT if with_thought else FORMAT_NO_THOUGHT]
     if shots in ("one", "few"):

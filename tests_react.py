@@ -6,6 +6,8 @@ No API calls: the model is replaced by a scripted fake client that returns prepa
 """
 from types import SimpleNamespace as NS
 
+import json
+
 import pytest
 
 from douroub import agent, core, tools
@@ -260,9 +262,9 @@ def test_repeated_action_is_not_run_twice():
 def test_invented_email_is_refused_and_memory_keeps_real_ids(isolated_logs):
     graph = agent.build_graph()
     client = FakeClient(
-        'Action: record_customer_interest\nAction Input: {"name": "Rana", "email": "rana@example.com", "message": "D04 for 3 people"}',
+        'Action: record_customer_interest\nAction Input: {"name": "Rana", "email": "rana@example.com", "group_size": 3, "message": "D04 Heritage Through Time"}',
         "Final Answer: What email should the team use?",
-        'Action: record_customer_interest\nAction Input: {"name": "Rana", "email": "rana.k@example.com", "message": "D04 for 3 people"}',
+        'Action: record_customer_interest\nAction Input: {"name": "Rana", "email": "rana.k@example.com", "group_size": 3, "message": "D04 Heritage Through Time"}',
         "Final Answer: Saved!")
     first = run(client, "Book D04 for 3, I'm Rana", graph=graph, thread="lead")
     assert first["trace"][2]["result"]["error"] == "details_not_from_visitor" and first["saved_ids"] == []
@@ -292,3 +294,36 @@ def test_auto_persona_and_overrides_reach_the_request():
 def test_graph_shape():
     g = agent.build_graph().get_graph()
     assert {"prepare", "reason", "act", "force_answer", "finalize"} <= set(g.nodes)
+
+
+# ----------------------------------------------------------------------------------------------- group size (v3)
+def test_an_inquiry_without_the_number_of_people_is_not_saved(isolated_logs):
+    client = FakeClient('Action: record_customer_interest\nAction Input: {"name": "Sami Kay", "email": "sami@example.com", "message": "D05 on 12 Dec"}',
+                        "Final Answer: How many people will join?")
+    out = run(client, "I'm Sami Kay, sami@example.com, D05 on 12 Dec please")
+    obs = out["trace"][2]["result"]
+    assert obs["status"] == "error" and out["saved_ids"] == []
+    assert "group_size" in json.dumps(obs)
+
+
+def test_a_number_of_people_the_visitor_never_gave_is_refused(isolated_logs):
+    client = FakeClient('Action: record_customer_interest\nAction Input: {"name": "Sami Kay", "email": "sami@example.com", "group_size": 2, "message": "D05"}',
+                        "Final Answer: How many people will join?")
+    out = run(client, "I'm Sami Kay, sami@example.com, I'd like D05")
+    obs = out["trace"][2]["result"]
+    assert obs["error"] == "details_not_from_visitor" and "number of people" in obs["missing"]
+
+
+@pytest.mark.parametrize("n,text,ok", [
+    (3, "we are 3", True), (2, "for two people", True), (2, "my sister and me", True), (1, "just me", True),
+    (4, "a family of four", True), (2, "D05 on 12 Dec, budget $200", False), (5, "D05 please", False),
+    (12, "12 dec", True),
+])
+def test_group_size_must_come_from_the_visitor(n, text, ok):
+    assert tools.group_size_from_visitor(n, text) is ok
+
+
+def test_rules_v3_require_the_number_of_people():
+    from douroub.instructions import RULES_V2, RULES_V3
+    assert len(RULES_V3) == len(RULES_V2) and "the number of people" in build_instructions()
+    assert "the number of people" not in build_instructions(version=2)

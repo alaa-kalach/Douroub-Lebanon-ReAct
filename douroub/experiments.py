@@ -24,6 +24,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 
 import pandas as pd
+from pathlib import Path
 
 from . import tools
 from .agent import build_graph, run_turn
@@ -380,8 +381,13 @@ def write_report(summary: pd.DataFrame, suite: str) -> None:
 BLUE, INK, MUTED, GRID, SURFACE = "#2a78d6", "#0b0b0b", "#52514e", "#e4e3df", "#fcfcfb"
 
 
-def plot_factor(table: pd.DataFrame, suite: str, factor: str) -> None:
-    """Small multiples: one horizontal bar panel per metric, one row per arm (single hue, values labelled)."""
+def plot_factor(table: pd.DataFrame, suite: str, factor: str, ncols: int | None = None, path=None, title: bool = True):
+    """Small multiples: one horizontal bar panel per metric, one row per arm (single hue, values labelled).
+
+    By default the panels sit side by side (a wide strip for the notebook); ncols arranges them in a grid that
+    fits a portrait page (used by the PDF report). Returns the path of the saved image."""
+    import math
+
     import matplotlib
 
     matplotlib.use("Agg")
@@ -393,33 +399,48 @@ def plot_factor(table: pd.DataFrame, suite: str, factor: str) -> None:
         panels = [c for c in ("success", "persona_fidelity", "answer diversity", "lexical_variety", "repeated_trigrams")
                   if c in table and table[c].notna().any()]
     if not panels:
-        return
+        return None
     labels = list(table["arm"])
-    fig, axes = plt.subplots(1, len(panels), figsize=(2.6 * len(panels) + 2.2, 0.42 * len(labels) + 1.3),
-                             sharey=True, facecolor=SURFACE)
-    axes = [axes] if len(panels) == 1 else list(axes)
-    y = range(len(labels))
-    for ax, col in zip(axes, panels):
+    cols = min(ncols or len(panels), len(panels))
+    rows = math.ceil(len(panels) / cols)
+    if ncols:
+        size = (7.4, rows * (0.22 * len(labels) + 0.8) + (0.35 if title else 0.1))
+    else:
+        size = (2.6 * len(panels) + 2.2, 0.42 * len(labels) + 1.3)
+    fig, grid = plt.subplots(rows, cols, figsize=size, facecolor=SURFACE, squeeze=False)
+    y = list(range(len(labels)))
+    for i, ax in enumerate(grid.flat):
+        if i >= len(panels):
+            ax.axis("off")
+            continue
+        col = panels[i]
         vals = pd.to_numeric(table[col], errors="coerce").fillna(0).tolist()
         ax.set_facecolor(SURFACE)
-        ax.barh(list(y), vals, color=BLUE, height=0.55)
+        ax.barh(y, vals, color=BLUE, height=0.55)
         pct = col in ("success", "same numbers every time")
-        top = 5 if col in ("persona_fidelity", "grounding", "helpfulness") else (1 if pct else max(vals or [1]) * 1.25 or 1)
+        top = 5 if col in ("persona_fidelity", "grounding", "helpfulness") else (1 if pct else max(vals or [1]) * 1.3 or 1)
         ax.set_xlim(0, top)
         for yi, v in zip(y, vals):
             text = f"{v:.0%}" if pct else (f"{v:.4f}" if col == "cost_usd" else f"{v:.2f}")
-            ax.text(v + top * 0.02, yi, text, va="center", fontsize=8, color=INK)
-        ax.set_title(METRICS.get(col, (col,))[0], fontsize=9, color=INK, loc="left")
-        ax.tick_params(colors=MUTED, labelsize=8, length=0)
+            ax.text(v + top * 0.02, yi, text, va="center", fontsize=7.5 if ncols else 8, color=INK)
+        ax.set_title(METRICS.get(col, (col,))[0], fontsize=8.5 if ncols else 9, color=INK, loc="left")
+        ax.tick_params(colors=MUTED, labelsize=7 if ncols else 8, length=0)
         ax.grid(axis="x", color=GRID, linewidth=0.6)
         ax.set_axisbelow(True)
         for side in ("top", "right", "left"):
             ax.spines[side].set_visible(False)
         ax.spines["bottom"].set_color(GRID)
-    axes[0].set_yticks(list(y), labels, fontsize=8, color=INK)
-    axes[0].invert_yaxis()
-    fig.suptitle(f"{suite.title()} experiments: {factor}", x=0.01, ha="left", fontsize=11, color=INK)
+        if i % cols == 0:
+            ax.set_yticks(y, labels, fontsize=7.5 if ncols else 8, color=INK)
+        else:
+            ax.set_yticks(y, [""] * len(y))
+        ax.invert_yaxis()
+    if title:
+        fig.suptitle(f"{suite.title()} experiments: {factor}", x=0.01, ha="left", fontsize=10 if ncols else 11,
+                     color=INK)
     fig.tight_layout()
-    CHARTS_DIR.mkdir(parents=True, exist_ok=True)
-    fig.savefig(CHARTS_DIR / f"{suite}_{factor.replace(' ', '_')}.png", dpi=150, facecolor=SURFACE)
+    path = path or CHARTS_DIR / f"{suite}_{factor.replace(' ', '_')}.png"
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(path, dpi=200 if ncols else 150, facecolor=SURFACE)
     plt.close(fig)
+    return path

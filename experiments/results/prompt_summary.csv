@@ -1,7 +1,7 @@
 suite,factor,arm,success,score,persona_match,persona_fidelity,helpfulness,grounding,model_calls,format_errors,format_slips,grounding_checks,invented_observations,length_cutoffs,answer_words,lexical_variety,repeated_trigrams,cost_usd,latency_s,runs,answer diversity,same numbers every time
 prompt,baseline,"baseline: CoT, one-shot, system",0.9375,0.9910625,1.0,4.6875,4.875,5.0,2.6875,0,2,9,0,0,68.625,0.794,0.00375,0.002668875,5.714375,16,0.4915,0.875
-prompt,chain of thought,no CoT (actions only),0.9375,0.9910625,1.0,4.75,4.875,5.0,2.75,0,10,10,0,0,70.125,0.80875,0.0013125,0.00240325,4.625,16,0.582375,0.75
-prompt,examples,zero-shot,0.875,0.982125,1.0,4.875,4.875,4.875,2.375,0,2,4,0,0,72.375,0.7944375,0.005375,0.0029563125,4.3025,16,0.538875,1.0
-prompt,examples,few-shot (4 examples),1.0,1.0,1.0,4.8125,4.8125,4.75,2.625,0,2,9,0,0,66.375,0.80925,0.008187499999999999,0.0035196875,4.006875,16,0.49825,0.875
+prompt,chain of thought,no CoT (actions only),0.9375,0.9910625,1.0,4.75,4.875,5.0,2.75,0,10,10,0,0,70.125,0.8087500000000001,0.0013125,0.00240325,4.625,16,0.582375,0.75
+prompt,examples,zero-shot,0.875,0.982125,1.0,4.875,4.875,4.875,2.375,0,2,4,0,0,72.375,0.7944375,0.005375,0.0029563124999999997,4.3025,16,0.538875,1.0
+prompt,examples,few-shot (4 examples),1.0,1.0,1.0,4.8125,4.8125,4.75,2.625,0,2,9,0,0,66.375,0.80925,0.0081875,0.0035196875,4.006875,16,0.49825,0.875
 prompt,placement,instructions in the message,0.9375,0.9910625,1.0,4.75,4.9375,4.9375,2.125,0,3,2,0,0,65.8125,0.8138125,0.0068125,0.002958625,3.57,16,0.620625,0.75
 prompt,instructions,no instructions block,0.625,0.9344375,1.0,4.875,4.75,4.75,2.5,0,12,10,0,0,70.0625,0.792375,0.003375,0.0026691875,3.9768749999999997,16,0.53125,0.875

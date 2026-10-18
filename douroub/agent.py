@@ -248,7 +248,26 @@ def run_turn(agent, message: str, thread_id: str = "default", persona: str = "au
              variant: PromptVariant = DEFAULT_VARIANT, config_override: dict | None = None,
              use_llm_router: bool = True, client=None) -> dict:
     """Answer one visitor message. Returns the final state (final answer, persona, trace, usage...)."""
+    payload, cfg = _inputs(message, thread_id, persona, variant, config_override, use_llm_router, client)
+    return agent.invoke(payload, cfg)
+
+
+def stream_turn(agent, message: str, thread_id: str = "default", persona: str = "auto",
+                variant: PromptVariant = DEFAULT_VARIANT, config_override: dict | None = None,
+                use_llm_router: bool = True, client=None):
+    """Like run_turn, but yields (node name, the state so far) after every node, so a UI can show each Thought,
+    Action and Observation as it happens. The last item is ("done", final state)."""
+    payload, cfg = _inputs(message, thread_id, persona, variant, config_override, use_llm_router, client)
+    state = {}
+    for update in agent.stream(payload, cfg, stream_mode="updates"):
+        for node, values in update.items():
+            state.update(values or {})
+            yield node, state
+    yield "done", agent.get_state(cfg).values
+
+
+def _inputs(message, thread_id, persona, variant, config_override, use_llm_router, client) -> tuple:
     payload = {"user_message": message, "persona": persona, "variant": variant.__dict__,
                "config_override": config_override or {}, "use_llm_router": use_llm_router}
     cfg = {"configurable": {"thread_id": thread_id, "client": client}, "recursion_limit": 4 * MAX_STEPS + 10}
-    return agent.invoke(payload, cfg)
+    return payload, cfg
